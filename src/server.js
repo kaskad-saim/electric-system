@@ -2,7 +2,9 @@ import express from 'express';
 import { Server } from 'socket.io';
 import http from 'http';
 import path from 'path';
+import mongoose from 'mongoose';
 import { startDevicePolling } from './services/deviceService.js';
+import ce303device1Model from './models/ce303device1Model.js'; // Импортируем модель
 
 // Настройка Express.js
 const app = express();
@@ -13,14 +15,25 @@ const io = new Server(server);
 const __dirname = path.resolve(); // Получаем корневую директорию проекта
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Подключение к MongoDB
+const MONGO_URI = 'mongodb://localhost:27017/electric-system'; // Замените на ваш URI
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log('Подключено к MongoDB'))
+  .catch((err) => console.error('Ошибка подключения к MongoDB:', err.message));
+
 // Запуск опроса устройства и отправка данных через Socket.IO
-startDevicePolling((data) => {
-  console.log('Полученные данные от устройства:');
-  console.log(`Total: ${data.total}`);
-  console.log(`T1: ${data.t1}`);
-  console.log(`T2: ${data.t2}`);
-  console.log(`T3: ${data.t3}`);
-  console.log(`T4: ${data.t4}`);
+startDevicePolling(async (data) => {
+  console.log('Полученные данные от устройства:', data);
+
+  // Сохраняем данные в MongoDB
+  try {
+    const newData = new ce303device1Model(data); // Используем новую модель
+    await newData.save();
+    console.log('Данные успешно сохранены в MongoDB');
+  } catch (err) {
+    console.error('Ошибка сохранения данных в MongoDB:', err.message);
+  }
 
   // Отправляем данные через Socket.IO
   io.emit('deviceData', data);
