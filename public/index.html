@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Device Data</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #data {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Device Data</h1>
+  <div id="data">Ожидание данных...</div>
+
+  <script>
+    const socket = io(); // Подключаемся к серверу
+
+    // Слушаем событие 'deviceData'
+    socket.on('deviceData', (data) => {
+      const dataElement = document.getElementById('data');
+      dataElement.innerHTML = `
+        Total: ${data.total}<br>
+        T1: ${data.t1}<br>
+        T2: ${data.t2}<br>
+        T3: ${data.t3}<br>
+        T4: ${data.t4}
+      `;
+    });
+  </script>
+</body>
+</html>

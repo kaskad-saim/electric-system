@@ -1,0 +1,20 @@
+{
+  "name": "electric-system",
+  "version": "1.0.0",
+  "description": "electric-system",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@serialport/parser-readline": "^13.0.0",
+    "express": "^4.21.2",
+    "nodemon": "^3.1.9",
+    "serialport": "^13.0.0",
+    "socket.io": "^4.8.1"
+  }
+}
