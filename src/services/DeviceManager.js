@@ -2,6 +2,7 @@ import { SerialPort } from 'serialport';
 import { ReadlineParser } from '@serialport/parser-readline';
 import { devicesConfig } from './deviceConfig.js';
 import { parseResponse } from '../utils/responseParser.js';
+import logger from '../logger.js';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,7 +22,7 @@ class PortManager {
     });
 
     this.port.on('error', (err) => {
-      console.error(`Ошибка работы с портом ${portSettings.path}: ${err.message}`);
+      logger.error(`Ошибка работы с портом ${portSettings.path}: ${err.message}`);
     });
 
     // Статус каждого устройства: online или offline, а также время последней попытки
@@ -37,7 +38,7 @@ class PortManager {
   async init() {
     this.port.open((err) => {
       if (err) {
-        console.error(`Ошибка открытия порта ${this.portSettings.path}: ${err.message}`);
+        logger.error(`Ошибка открытия порта ${this.portSettings.path}: ${err.message}`);
         return;
       }
       console.log(`Порт ${this.portSettings.path} успешно открыт`);
@@ -78,7 +79,7 @@ class PortManager {
         await new Promise((resolve) => {
           this.port.write(req.buffer, (err) => {
             if (err) {
-              console.error(
+              logger.error(
                 `Ошибка отправки запроса "${req.name}" для ${deviceKey}: ${err.message}`
               );
               return resolve();
@@ -102,10 +103,12 @@ class PortManager {
 
   // Цикл последовательного опроса устройств на данном порту.
   async pollDevicesCycle() {
+    const ONLINE_INTERVAL = 5 * 1000;
+    const OFFLINE_INTERVAL = 1000;
+
     while (true) {
       for (const { key, config } of this.devices) {
         const status = this.deviceStatus[key];
-        const RESPONSE_INTERVAL = 5 * 1000; // интервал опроса
         const RECONNECT_INTERVAL = 120 * 1000; // интервал для переподключения
 
         if (status.online) {
@@ -113,12 +116,15 @@ class PortManager {
           if (pollResult.success) {
             await this.saveData(key, pollResult.results);
             status.lastAttempt = Date.now();
+            await sleep(ONLINE_INTERVAL);
           } else {
             console.warn(`Устройство ${key} не отвечает. Помечаем как offline.`);
             status.online = false;
             status.lastAttempt = Date.now();
+            await sleep(OFFLINE_INTERVAL);
           }
         } else {
+          // Устройство в offline-режиме. Проверяем, пора ли делать повторную попытку
           const now = Date.now();
           if (now - status.lastAttempt >= RECONNECT_INTERVAL) {
             console.log(`Пробуем переподключить устройство ${key}...`);
@@ -133,8 +139,9 @@ class PortManager {
               status.lastAttempt = now;
             }
           }
+          // Между проверками offline-устройства тоже ставим короткий интервал, чтобы часто не крутить цикл
+          await sleep(OFFLINE_INTERVAL);
         }
-        await sleep(RESPONSE_INTERVAL);
       }
     }
   }
@@ -144,7 +151,7 @@ class PortManager {
     if (!data) return;
     const model = this.modelsMap[deviceKey];
     if (!model) {
-      console.error(`Нет модели для устройства ${deviceKey}`);
+      logger.error(`Нет модели для устройства ${deviceKey}`);
       return;
     }
     try {
@@ -152,7 +159,7 @@ class PortManager {
       await newData.save();
       console.log(deviceKey, data); // Вывод данных в консоль
     } catch (err) {
-      console.error(`Ошибка сохранения данных для ${deviceKey}: ${err.message}`);
+      logger.error(`Ошибка сохранения данных для ${deviceKey}: ${err.message}`);
     }
   }
 }

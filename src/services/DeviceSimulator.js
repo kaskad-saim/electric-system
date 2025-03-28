@@ -1,4 +1,5 @@
 import { devicesConfig } from './deviceConfig.js';
+import logger from '../logger.js';
 
 function getRandomValue(min, max, decimals = 2) {
   return +(Math.random() * (max - min) + min).toFixed(decimals);
@@ -29,10 +30,10 @@ export function startDeviceSimulator(modelsMap, callback) {
           const newData = new model(data);
           await newData.save();
         } catch (err) {
-          console.error(`Ошибка сохранения данных для ${key}: ${err.message}`);
+          logger.error(`Ошибка сохранения данных для ${key}: ${err.message}`);
         }
       } else {
-        console.error(`Нет модели для устройства ${key}`);
+        logger.error(`Нет модели для устройства ${key}`);
       }
       callback(key, data);
     }

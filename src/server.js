@@ -3,10 +3,11 @@ import { Server } from 'socket.io';
 import http from 'http';
 import path from 'path';
 import dotenv from 'dotenv';
-dotenv.config();
 import UniversalDeviceManager from './services/DeviceManager.js';
 import { startDeviceSimulator } from './services/deviceSimulator.js';
 import { connectDB, modelsMap } from './services/dataBaseConfig.js';
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
