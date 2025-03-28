@@ -2,45 +2,39 @@ import express from 'express';
 import { Server } from 'socket.io';
 import http from 'http';
 import path from 'path';
-import mongoose from 'mongoose';
-import { startDevicePolling } from './services/deviceService.js';
-import ce303device1Model from './models/ce303device1Model.js'; // Импортируем модель
+import dotenv from 'dotenv';
+dotenv.config();
+import UniversalDeviceManager from './services/DeviceManager.js';
+import { startDeviceSimulator } from './services/deviceSimulator.js';
+import { connectDB, modelsMap } from './services/dataBaseConfig.js';
 
-// Настройка Express.js
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Middleware для обслуживания статических файлов из папки public
-const __dirname = path.resolve(); // Получаем корневую директорию проекта
+const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Подключение к MongoDB
-const MONGO_URI = 'mongodb://localhost:27017/electric-system'; // Замените на ваш URI
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log('Подключено к MongoDB'))
-  .catch((err) => console.error('Ошибка подключения к MongoDB:', err.message));
+void connectDB();
 
-// Запуск опроса устройства и отправка данных через Socket.IO
-startDevicePolling(async (data) => {
-  console.log('Полученные данные от устройства:', data);
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-  // Сохраняем данные в MongoDB
-  try {
-    const newData = new ce303device1Model(data); // Используем новую модель
-    await newData.save();
-    console.log('Данные успешно сохранены в MongoDB');
-  } catch (err) {
-    console.error('Ошибка сохранения данных в MongoDB:', err.message);
-  }
+if (NODE_ENV === 'development') {
+  console.log('Запуск в тестовой среде');
+  startDeviceSimulator(modelsMap, (deviceKey, data) => {
+    io.emit('deviceData', { deviceKey, data });
+  });
+} else if (NODE_ENV === 'production') {
+  console.log('Запуск в рабочей среде');
+  const deviceManager = new UniversalDeviceManager(modelsMap);
+  void deviceManager.init();
+}
 
-  // Отправляем данные через Socket.IO
-  io.emit('deviceData', data);
+io.on('connection', (socket) => {
+  console.log('Клиент подключился');
 });
 
-// Запуск сервера
-const PORT = 3000;
+const PORT = process.env.PORT || 3002;
 server.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);
 });

@@ -23,7 +23,6 @@
   <script>
     const socket = io(); // Подключаемся к серверу
 
-    // Слушаем событие 'deviceData'
     socket.on('deviceData', (data) => {
       const dataElement = document.getElementById('data');
       dataElement.innerHTML = `
